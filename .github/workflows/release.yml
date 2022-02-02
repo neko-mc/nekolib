@@ -14,9 +14,11 @@ jobs:
   build:
     runs-on: self-hosted
     container:
-      image: eclipse-temurin:17-jdk
-      options: --user root
+      image: gradle:jdk17
     steps:
+      - 
+        name: Update container and install git
+        run: apt update && apt install git -y
       - 
         name: Checkout repository
         uses: actions/checkout@v2
@@ -45,3 +47,8 @@ jobs:
         with:
           name: Artifacts
           path: build/libs/
+      -
+        name: Send a Discord notification
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK }}
