@@ -98,17 +98,13 @@ build.dependsOn remapMavenJar
 publishing {
   publications {
     maven(MavenPublication) {
-      artifactId = project.archivesBaseName  + "-" + getBranch()
-      groupId = project.name
-      version = project.version
-
 			artifact(remapMavenJar)
       artifact(sourcesJar)
       artifact(javadocJar)
     }
   }
   repositories {
-    //mavenLocal()
+    mavenLocal()
     if (ENV.MAVEN_URL) {
       maven {
         url ENV.MAVEN_URL
