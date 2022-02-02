@@ -114,6 +114,16 @@ publishing {
         }
       }
     }
+    if (ENV.GITHUB_TOKEN) {
+      maven {
+        name = "GitHubPackages"
+        url = "https://maven.pkg.github.com/" + ENV.GITHUB_REPOSITORY
+        credentials {
+          username = ENV.GITHUB_ACTOR
+          password = ENV.GITHUB_TOKEN
+        }
+      }
+    }
   }
 }
 
