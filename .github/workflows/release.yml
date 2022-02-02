@@ -19,7 +19,7 @@ jobs:
     steps:
       - 
         name: Update container and install required dependencies
-        run: apt update && apt install git npm -y
+        run: apt update && apt install git -y
       - 
         name: Checkout repository
         uses: actions/checkout@v2
