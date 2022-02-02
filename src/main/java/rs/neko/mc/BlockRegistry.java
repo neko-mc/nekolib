@@ -7,7 +7,11 @@
 package rs.neko.mc;
 
 import net.minecraft.block.Block;
+import net.minecraft.item.Item;
 
 public interface BlockRegistry extends ItemRegistry {
+  default Item asItem() {
+    return asBlock().asItem();
+  }
   public Block asBlock();
 }

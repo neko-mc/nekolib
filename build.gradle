@@ -98,8 +98,8 @@ publishing {
     maven {
       url = "https://mc.neko.rs/maven/releases"
 			credentials {
-				username project.mvn_user
-				password project.mvn_pass
+				username mvn_user
+				password mvn_pass
 			}
     }
   }
