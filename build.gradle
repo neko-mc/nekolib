@@ -1,0 +1,106 @@
+plugins {
+	id 'fabric-loom' version '0.11-SNAPSHOT'
+  id "org.cadixdev.licenser" version "0.6.1"
+	id 'maven-publish'
+}
+
+sourceCompatibility = JavaVersion.VERSION_17
+targetCompatibility = JavaVersion.VERSION_17
+
+archivesBaseName = project.mod_id
+version = "$rootProject.minecraft_version-$project.mod_version"
+group = rootProject.maven_group
+
+repositories {
+
+}
+
+dependencies {
+	minecraft "com.mojang:minecraft:$rootProject.minecraft_version"
+	mappings "net.fabricmc:yarn:$rootProject.yarn_mappings:v2"
+	modApi "net.fabricmc:fabric-loader:$rootProject.loader_version"
+
+  modImplementation "net.fabricmc.fabric-api:fabric-api:$rootProject.fabric_version"
+}
+
+processResources {
+	inputs.property "mod_id", project.mod_id
+	inputs.property "mod_version", project.mod_version
+
+	filesMatching("fabric.mod.json") {
+		expand(
+      "mod_id": project.mod_id,
+      "mod_version": project.mod_version,
+      "license": "LGPL-3.0",
+    )
+	}
+}
+
+license {
+	header rootProject.file("HEADER")
+	include "**/*.java"
+}
+
+tasks.withType(JavaCompile).configureEach {
+	// Minecraft 1.18 (1.18-pre2) upwards uses Java 17.
+	it.options.release = 17
+}
+
+java {
+  withSourcesJar()
+}
+
+jar {
+	from("LICENSE") {
+		rename { "${it}_${project.archivesBaseName}"}
+	}
+}
+
+javadoc {
+	options {
+		source = "17"
+		encoding = "UTF-8"
+		charSet = "UTF-8"
+		memberLevel = JavadocMemberLevel.PACKAGE
+		links(
+				"https://guava.dev/releases/21.0/api/docs/",
+				"https://asm.ow2.io/javadoc/",
+				"https://docs.oracle.com/javase/8/docs/api/",
+				"https://jenkins.liteloader.com/job/Mixin/javadoc/",
+				"https://logging.apache.org/log4j/2.x/log4j-api/apidocs/"
+		)
+		// Disable the crazy super-strict doclint tool in Java 8
+		addStringOption("Xdoclint:none", "-quiet")
+	}
+	failOnError false
+}
+
+task remapMavenJar(type: net.fabricmc.loom.task.RemapJarTask, dependsOn: jar) {
+	input = jar.archiveFile
+	archiveFileName = "${archivesBaseName}-${project.version}-maven.jar"
+	addNestedDependencies = false
+}
+build.dependsOn remapMavenJar
+
+publishing {
+	publications {
+		mavenJava(MavenPublication) {
+			artifact(remapMavenJar) {
+				builtBy remapMavenJar
+			}
+			artifact(sourcesJar) {
+				builtBy remapSourcesJar
+			}
+			//artifact javadocJar
+		}
+	}
+  repositories {
+    maven {
+      url = "https://mc.neko.rs/maven/releases"
+			credentials {
+				username project.mvn_user
+				password project.mvn_pass
+			}
+    }
+  }
+}

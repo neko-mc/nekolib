@@ -1,0 +1,23 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${mod_version}",
+  "name": "${mod_id}",
+  "authors": [
+    "Atakku"
+  ],
+  "contact": {
+    "homepage": "https://mc.neko.rs/${mod_id}",
+    "issues": "https://github.com/neko-mc/${mod_id}/issues",
+    "sources": "https://github.com/neko-mc/${mod_id}/"
+  },
+  "license": "${license}",
+  "icon": "assets/${mod_id}/icon.png",
+  "environment": "*",
+  "depends": {
+    "fabricloader": ">=0.12.12",
+    "minecraft": "1.18.x",
+    "java": ">=17",
+    "fabric": "*"
+  }
+}
