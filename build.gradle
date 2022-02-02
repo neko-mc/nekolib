@@ -1,59 +1,64 @@
-plugins {
-	id 'fabric-loom' version '0.11-SNAPSHOT'
-  id "org.cadixdev.licenser" version "0.6.1"
-	id 'maven-publish'
+buildscript {
+	dependencies {
+		classpath 'org.kohsuke:github-api:1.135'
+	}
 }
+
+plugins {
+	id 'maven-publish'
+	id "org.cadixdev.licenser" version "0.6.1"
+	id "fabric-loom" version "0.11-SNAPSHOT"
+}
+
+def ENV = System.getenv()
 
 sourceCompatibility = JavaVersion.VERSION_17
 targetCompatibility = JavaVersion.VERSION_17
 
-archivesBaseName = project.mod_id
-version = "$rootProject.minecraft_version-$project.mod_version"
-group = rootProject.maven_group
+tasks.withType(JavaCompile).configureEach {
+  it.options.encoding = "UTF-8"
+  it.options.release = 17
+}
+
+archivesBaseName = mod_id
+version = mod_version + (ENV.GITHUB_ACTIONS ? "" : "+local")
+group = maven_group
 
 repositories {
 
 }
 
 dependencies {
-	minecraft "com.mojang:minecraft:$rootProject.minecraft_version"
-	mappings "net.fabricmc:yarn:$rootProject.yarn_mappings:v2"
-	modApi "net.fabricmc:fabric-loader:$rootProject.loader_version"
+  minecraft "com.mojang:minecraft:$minecraft_version"
+	mappings "net.fabricmc:yarn:$yarn_mappings:v2"
+	modApi "net.fabricmc:fabric-loader:$loader_version"
 
-  modImplementation "net.fabricmc.fabric-api:fabric-api:$rootProject.fabric_version"
+  modImplementation "net.fabricmc.fabric-api:fabric-api:$fabric_version"
 }
 
 processResources {
-	inputs.property "mod_id", project.mod_id
-	inputs.property "mod_version", project.mod_version
+	inputs.property "mod_id", mod_id
+	inputs.property "mod_version", mod_version
 
 	filesMatching("fabric.mod.json") {
 		expand(
-      "mod_id": project.mod_id,
-      "mod_version": project.mod_version,
+      "mod_id": mod_id,
+      "mod_version": mod_version,
       "license": "LGPL-3.0",
     )
 	}
 }
 
 license {
-	header rootProject.file("HEADER")
+	header file("HEADER")
+  properties {
+    year = 2022
+  }
 	include "**/*.java"
-}
-
-tasks.withType(JavaCompile).configureEach {
-	// Minecraft 1.18 (1.18-pre2) upwards uses Java 17.
-	it.options.release = 17
 }
 
 java {
   withSourcesJar()
-}
-
-jar {
-	from("LICENSE") {
-		rename { "${it}_${project.archivesBaseName}"}
-	}
 }
 
 javadoc {
@@ -72,8 +77,16 @@ javadoc {
 		// Disable the crazy super-strict doclint tool in Java 8
 		addStringOption("Xdoclint:none", "-quiet")
 	}
+  dependsOn(sourcesJar)
+  exclude("MANIFEST.MF")
 	failOnError false
 }
+
+task javadocJar(type: Jar, dependsOn: javadoc) {  
+  from javadoc.destinationDir
+  archiveClassifier = "javadoc"
+}
+build.dependsOn javadocJar
 
 task remapMavenJar(type: net.fabricmc.loom.task.RemapJarTask, dependsOn: jar) {
 	input = jar.archiveFile
@@ -83,24 +96,64 @@ task remapMavenJar(type: net.fabricmc.loom.task.RemapJarTask, dependsOn: jar) {
 build.dependsOn remapMavenJar
 
 publishing {
-	publications {
-		mavenJava(MavenPublication) {
-			artifact(remapMavenJar) {
-				builtBy remapMavenJar
-			}
-			artifact(sourcesJar) {
-				builtBy remapSourcesJar
-			}
-			//artifact javadocJar
-		}
-	}
-  repositories {
-    maven {
-      url = "https://mc.neko.rs/maven/releases"
-			credentials {
-				username mvn_user
-				password mvn_pass
-			}
+  publications {
+    maven(MavenPublication) {
+      artifactId = project.archivesBaseName  + "-" + getBranch()
+      groupId = project.name
+      version = project.version
+
+			artifact(remapMavenJar)
+      artifact(sourcesJar)
+      artifact(javadocJar)
     }
   }
+  repositories {
+    //mavenLocal()
+    if (ENV.MAVEN_URL) {
+      maven {
+        url ENV.MAVEN_URL
+        credentials {
+          username ENV.MAVEN_USERNAME
+          password ENV.MAVEN_PASSWORD
+        }
+      }
+    }
+  }
+}
+
+import groovy.util.XmlSlurper
+
+def getBranch() {
+	def ENV = System.getenv()
+	if (ENV.GITHUB_REF) {
+		def branch = ENV.GITHUB_REF
+		return branch.substring(branch.lastIndexOf("/") + 1)
+	}
+
+	return "unknown"
+}
+
+import org.kohsuke.github.GHReleaseBuilder
+import org.kohsuke.github.GitHub
+
+task github(dependsOn: build) {
+	onlyIf {
+		ENV.GITHUB_TOKEN
+	}
+
+	doLast {
+		def github = GitHub.connectUsingOAuth(ENV.GITHUB_TOKEN as String)
+		def repository = github.getRepository(ENV.GITHUB_REPOSITORY)
+
+		def releaseBuilder = new GHReleaseBuilder(repository, version as String)
+		releaseBuilder.name("${archivesBaseName}-${version}")
+		releaseBuilder.body(ENV.CHANGELOG ?: "No changelog provided")
+		releaseBuilder.commitish(getBranch())
+
+		def ghRelease = releaseBuilder.create()
+		ghRelease.uploadAsset(file("${project.buildDir}/libs/${archivesBaseName}-${version}.jar"), "application/java-archive");
+		ghRelease.uploadAsset(file("${project.buildDir}/libs/${archivesBaseName}-${version}-maven.jar"), "application/java-archive");
+		ghRelease.uploadAsset(file("${project.buildDir}/libs/${archivesBaseName}-${version}-sources.jar"), "application/java-archive");
+		ghRelease.uploadAsset(file("${project.buildDir}/libs/${archivesBaseName}-${version}-javadoc.jar"), "application/java-archive");
+	}
 }
