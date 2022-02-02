@@ -14,7 +14,8 @@ jobs:
   build:
     runs-on: self-hosted
     container:
-      image: gradle:jdk17
+      image: eclipse-temurin:17-jdk
+      options: --user root
     steps:
       - 
         name: Update container and install git
