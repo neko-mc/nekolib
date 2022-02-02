@@ -22,7 +22,7 @@ jobs:
         run: apt update && apt install git -y
       - 
         name: Checkout repository
-        uses: actions/checkout@v2
+        uses: myci-actions/checkout@5
       - 
         name: Generate changelog
         uses: FabricMC/fabric-action-scripts@v1
