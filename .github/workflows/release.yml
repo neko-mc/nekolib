@@ -18,8 +18,8 @@ jobs:
       options: --user root
     steps:
       - 
-        name: Update container and install git
-        run: apt update && apt install git -y
+        name: Update container and install required dependencies
+        run: apt update && apt install git node -y
       - 
         name: Checkout repository
         uses: actions/checkout@v2
