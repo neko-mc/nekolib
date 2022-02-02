@@ -6,13 +6,12 @@ on:
         description: 'Release channel'     
         required: true
         default: 'release'
-
-permissions:
-  contents: write
-
 jobs:
-  build:
+  release:
     runs-on: self-hosted
+    permissions: 
+      contents: read
+      packages: write 
     steps:
       - 
         name: Checkout repository
